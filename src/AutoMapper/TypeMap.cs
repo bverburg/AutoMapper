@@ -11,8 +11,19 @@ namespace AutoMapper
         private readonly IList<Action<object, object>> _afterMapActions = new List<Action<object, object>>();
         private readonly IList<Action<object, object>> _beforeMapActions = new List<Action<object, object>>();
         private readonly TypeInfo _destinationType;
-        private readonly IDictionary<Type, Type> _includedDerivedTypes = new Dictionary<Type, Type>();
-		private readonly ThreadSafeList<PropertyMap> _propertyMaps = new ThreadSafeList<PropertyMap>();
+        
+        
+        //private readonly IDictionary<Type, Type> _includedDerivedTypes = new Dictionary<Type, Type>();
+
+        private readonly IList<IncludedDerivedType> _includedDerivedTypes = new List<IncludedDerivedType>();
+
+        protected struct IncludedDerivedType
+        {
+            public Type Source { get; set; }
+            public Type Destination { get; set; }
+        }
+
+        private readonly ThreadSafeList<PropertyMap> _propertyMaps = new ThreadSafeList<PropertyMap>();
         private readonly ThreadSafeList<SourceMemberConfig> _sourceMemberConfigs = new ThreadSafeList<SourceMemberConfig>();
         private readonly IList<PropertyMap> _inheritedMaps = new List<PropertyMap>();
         private PropertyMap[] _orderedPropertyMaps;
@@ -166,23 +177,38 @@ namespace AutoMapper
 
         public void IncludeDerivedTypes(Type derivedSourceType, Type derivedDestinationType)
         {
-            _includedDerivedTypes[derivedSourceType] = derivedDestinationType;
+            _includedDerivedTypes.Add(new IncludedDerivedType(){Destination = derivedDestinationType,Source = derivedSourceType});
         }
-
-        public Type GetDerivedTypeFor(Type derivedSourceType)
+        
+        public IList<Type> GetDerivedTypesFor(Type derivedSourceType)
         {
-            if (!_includedDerivedTypes.ContainsKey(derivedSourceType))
+            var includes = new List<Type>();
+            foreach (var includedDerivedType in _includedDerivedTypes)
             {
-                return DestinationType;
+                if(includedDerivedType.Source == derivedSourceType)
+                    includes.Add(includedDerivedType.Destination);
             }
 
-            return _includedDerivedTypes[derivedSourceType];
+
+            if (includes.Count == 0)
+            {
+                includes.Add(DestinationType);
+            }
+
+            return includes;
         }
 
         public bool TypeHasBeenIncluded(Type derivedSourceType, Type derivedDestinationType)
         {
-            if (_includedDerivedTypes.ContainsKey(derivedSourceType))
-                return _includedDerivedTypes[derivedSourceType].IsAssignableFrom(derivedDestinationType);
+            foreach (var includedDerivedType in _includedDerivedTypes)
+            {
+                if (includedDerivedType.Source == derivedSourceType &&
+                    includedDerivedType.Destination == derivedDestinationType)
+                {
+                    return includedDerivedType.Destination.IsAssignableFrom(derivedDestinationType);
+                }
+                    
+            }
             return false;
         }
 

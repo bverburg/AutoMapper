@@ -386,7 +386,7 @@ namespace AutoMapper
                                t.SourceType.IsAssignableFrom(source.GetType()) &&
                                (
                                    destinationType.IsAssignableFrom(t.DestinationType) ||
-                                   t.GetDerivedTypeFor(potentialSourceType) != null
+                                   t.GetDerivedTypesFor(potentialSourceType).Any()
                                )
                             ;
                     }
@@ -550,7 +550,9 @@ namespace AutoMapper
 
             if (typeMap == null)
             {
-                typeMap = _typeMaps.FirstOrDefault(x => x.SourceType == sourceType && x.GetDerivedTypeFor(sourceType) == destinationType);
+
+
+                typeMap = _typeMaps.FirstOrDefault(x => x.SourceType == sourceType && x.GetDerivedTypesFor(sourceType).Contains(destinationType));
 
                 if (typeMap == null)
                 {
@@ -560,13 +562,15 @@ namespace AutoMapper
 
                         if (typeMap == null) continue;
 
-                        var derivedTypeFor = typeMap.GetDerivedTypeFor(sourceType);
-                        if (derivedTypeFor != destinationType)
+                        var derivedTypesFor = typeMap.GetDerivedTypesFor(sourceType);
+                        foreach (var derivedTypeFor in derivedTypesFor)
                         {
-                            typeMap = CreateTypeMap(sourceType, derivedTypeFor, profileName, typeMap.ConfiguredMemberList);
+                            if (derivedTypeFor != destinationType)
+                            {
+                                typeMap = CreateTypeMap(sourceType, derivedTypeFor, profileName, typeMap.ConfiguredMemberList);
+                                break;
+                            }    
                         }
-
-                        break;
                     }
 
                     if ((sourceType.BaseType != null) && (typeMap == null))

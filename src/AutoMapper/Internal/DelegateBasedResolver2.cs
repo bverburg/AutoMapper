@@ -28,6 +28,10 @@ namespace AutoMapper
 			{
 			    return source.New(null, MemberType);
 			}
+            catch (ArgumentNullException)
+            {
+                return source.New(null, MemberType);
+            }
 		}
 
 		public Type MemberType
